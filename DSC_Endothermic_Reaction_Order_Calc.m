@@ -1,8 +1,13 @@
 %% Reaction Order Calculator given Endothermic Decomposition
 clear; clc; close all;
 
+x = (-2:.05:2)';
+Poly = (x+1).*(x+2).*(x-1).*(x-1);
+
+data = horzcat(x,Poly);
+
 % Load DSC data
-data = load('Me_When_I_finally_Get_to_tuch_the_DSC'); % DSC OFF LIMITS :(
+%data = load('Me_When_I_finally_Get_to_tuch_the_DSC'); % DSC OFF LIMITS :(
 temperature = data(:, 1);
 heatFlow = data(:, 2);
 
@@ -10,7 +15,7 @@ heatFlow = data(:, 2);
 smoothedHeatFlow = smooth(heatFlow, 5);
 
 % Use the findpeaks function to detect peaks
-[pks, locs, widths, proms] = finpeaks(-smoothedHeatFlow, temperature,'MinPeakProminence', 0.1);
+[pks, locs, widths, proms] = findpeaks(-smoothedHeatFlow, temperature,'MinPeakProminence', 0.1);
 
 pks = -pks;     % pks - Height of detected peakrs // locs - Index of peaks
 
@@ -19,8 +24,8 @@ secondDerivative = gradient(gradient(smoothedHeatFlow));
 
 % Empty Data Sets
 inflectionPoints = zeros(length(pks), 2);
-S = zeros(length(pks));
-n = zeros(length(pks));
+S = zeros(length(pks),1);
+n = zeros(length(pks),1);
 
 % find points of inflection on left and right of peak
 for i = 1:length(pks)
@@ -33,8 +38,11 @@ for i = 1:length(pks)
         leftInflectionIndex = (peakIndex - j);
         if secondDerivative(leftInflectionIndex) <= 0
             break
+        elseif peakIndex - j == 1
+            break
+        else
+            j = j+1;
         end
-        j = j+1;
     end
 
     % Find the right side inflection point
@@ -43,8 +51,11 @@ for i = 1:length(pks)
         rightInflectionIndex = (peakIndex + j);
         if secondDerivative(rightInflectionIndex) <= 0
             break
+        elseif height(x) - peakIndex == j
+            break
+        else
+            j = j+1;
         end
-        j = j+1;
     end
 
     % Store the left and right points of inflection in the matrix
@@ -91,10 +102,22 @@ for i = 1:length(pks)
     end
     
     % Find the most accurate S value 
+    minDistance = 0.5;  % Set a minimum distance (or temperature difference)
+
     DifferenceS = abs(S2Matrix - S1Matrix);
     minDifference = min(DifferenceS(:));
     [minRow, minCol] = find(DifferenceS == minDifference);
+
+    % Ensure that the points are at least 'minDistance' apart
+    while abs(temperature(minCol + peakIndex) - temperature(minRow + leftInflectionIndex)) < minDistance
+        % Remove this pair and find the next closest match
+        DifferenceS(minRow, minCol) = inf;
+        minDifference = min(DifferenceS(:));
+        [minRow, minCol] = find(DifferenceS == minDifference);
+    end
     nR = length(minRow);
+
+
     if mod(nR, 2) == 1 % If the number of elements is odd, take the middle value
         medianRow = minRow((nR+1)/2);
         medianCol = minCol((nR+1)/2);
@@ -129,7 +152,7 @@ for i = 1:length(pks)
     % Highlight the tangent points
     plot(temperature(actualRowIndex), smoothedHeatFlow(actualRowIndex), 'ro', 'MarkerFaceColor', 'r', 'DisplayName', 'Point on Left');
     plot(temperature(actualColIndex), smoothedHeatFlow(actualColIndex), 'go', 'MarkerFaceColor', 'g', 'DisplayName', 'Point on Right');
-    plot(intercept,'bo')
+    %plot(intercept,'bo')
 
 end
 
