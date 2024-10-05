@@ -1,16 +1,12 @@
 %% Reaction Order Calculator given Endothermic Decomposition
 clear; clc; close all;
 
-x = (-2:.05:2)';
-Poly = (x+1).*(x+2).*(x-1).*(x-1);
-
-data = horzcat(x,Poly);
-
 % Load DSC data
-%data = load('Me_When_I_finally_Get_to_tuch_the_DSC'); % DSC OFF LIMITS :(
-temperature = data(:, 1);
-heatFlow = data(:, 2);
+data = readtable('Zn Fit.xlsx');
+data = table2array(data);
 
+temperature = data(:, 2);
+heatFlow = data(:, 3);
 % Smooth data to reduce noise
 smoothedHeatFlow = smooth(heatFlow, 5);
 
@@ -51,7 +47,7 @@ for i = 1:length(pks)
         rightInflectionIndex = (peakIndex + j);
         if secondDerivative(rightInflectionIndex) <= 0
             break
-        elseif height(x) - peakIndex == j
+        elseif height(temperature) - peakIndex == j
             break
         else
             j = j+1;
@@ -142,6 +138,8 @@ for i = 1:length(pks)
     % Plot the DSC data to visualize the peak
     figure;
     plot(temperature, smoothedHeatFlow);
+    xlim([740 780])
+    ylim([-2,0])
     xlabel('Temperature (°C)');
     ylabel('Heat Flow (W/g)');
     title('DSC Curve');
